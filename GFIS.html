@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GFIS — Gamified Fault Injection Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0f1117;
+  --bg2:      #161820;
+  --bg3:      #1e2030;
+  --bg4:      #252840;
+  --border:   #2e3150;
+  --border2:  #3d4170;
+  --text:     #e8eaf6;
+  --text2:    #9095b8;
+  --text3:    #5a5f82;
+  --accent:   #6c8fff;
+  --accent2:  #4a6fff;
+  --green:    #4ade80;
+  --green2:   #166534;
+  --green-bg: #0d2818;
+  --red:      #f87171;
+  --red2:     #7f1d1d;
+  --red-bg:   #200f0f;
+  --amber:    #fbbf24;
+  --amber-bg: #1c1200;
+  --purple:   #a78bfa;
+  --purple-bg:#1a0d35;
+  --gold:     #f59e0b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── LAYOUT ── */
+.app { max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+
+/* ── HEADER ── */
+.app-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--accent2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.logo-text { font-size: 15px; font-weight: 600; color: var(--text); }
+.logo-sub { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.1em; color: var(--text3); text-transform: uppercase; }
+.header-right { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text3); letter-spacing: 0.08em; text-align: right; }
+
+/* ── SCORE BAR ── */
+.score-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) auto;
+  gap: 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+.stat { display: flex; flex-direction: column; }
+.stat-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 22px; font-weight: 500;
+  line-height: 1; margin-bottom: 3px;
+}
+.sv-score  { color: var(--accent); }
+.sv-timer  { color: var(--green); }
+.sv-timer.warn   { color: var(--amber); }
+.sv-timer.danger { color: var(--red); }
+.sv-streak { color: var(--purple); }
+.sv-sc     { color: var(--text2); }
+.stat-lbl {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text3);
+}
+.level-box { text-align: center; }
+.level-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--purple-bg);
+  border: 1px solid var(--purple);
+  border-radius: 20px; padding: 5px 14px;
+  font-size: 12px; font-weight: 500; color: var(--purple);
+  margin-bottom: 3px;
+}
+.level-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; color: var(--text3);
+  letter-spacing: 0.06em;
+}
+
+/* ── PROGRESS ── */
+.progress-wrap { margin-bottom: 12px; }
+.progress-track {
+  height: 4px; background: var(--bg3);
+  border-radius: 10px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--purple));
+  border-radius: 10px;
+  transition: width 0.5s ease;
+}
+.progress-meta {
+  display: flex; justify-content: space-between;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9.5px; color: var(--text3);
+  margin-top: 5px;
+}
+
+/* ── BADGES ── */
+.badges-row {
+  display: flex; gap: 7px; flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.badge-chip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9.5px; letter-spacing: 0.04em;
+  padding: 4px 11px; border-radius: 20px;
+  border: 1px solid var(--border2);
+  color: var(--text3);
+  opacity: 0.35;
+  transition: opacity 0.4s, background 0.4s, color 0.4s, border-color 0.4s;
+}
+.badge-chip.earned {
+  opacity: 1;
+  background: var(--purple-bg);
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+/* ── SCENARIO CARD ── */
+.scenario-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.sc-top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.sc-title { font-size: 14px; font-weight: 500; color: var(--text); }
+.sc-meta { display: flex; align-items: center; gap: 8px; }
+.diff-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9.5px; letter-spacing: 0.06em; font-weight: 500;
+  padding: 3px 10px; border-radius: 20px;
+}
+.dL1 { background: var(--green-bg); color: var(--green); border: 1px solid #1a5230; }
+.dL2 { background: var(--amber-bg); color: var(--amber); border: 1px solid #4a3000; }
+.dL3 { background: var(--red-bg);   color: var(--red);   border: 1px solid #4a1515; }
+.mult-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9.5px; color: var(--text3);
+  background: var(--bg3); padding: 3px 8px; border-radius: 4px;
+}
+
+.sc-body { padding: 18px 20px; }
+
+/* circuit display */
+.circuit-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 16px;
+  min-height: 170px;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.circuit-box svg { max-width: 100%; height: auto; display: block; }
+
+/* scenario description */
+.sc-desc {
+  font-size: 13.5px; color: var(--text2);
+  line-height: 1.7; margin-bottom: 16px;
+  background: var(--bg3); border-radius: 8px;
+  padding: 12px 16px;
+}
+.sc-desc strong { color: var(--amber); }
+
+/* fault class tag */
+.fault-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 9.5px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text3); padding: 3px 10px; border-radius: 4px;
+  margin-bottom: 14px;
+}
+
+/* options */
+.options-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 14px;
+}
+.opt-btn {
+  padding: 12px 14px;
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; text-align: left;
+  cursor: pointer; line-height: 1.45;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.opt-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--bg4);
+  color: var(--text);
+}
+.opt-btn:disabled { cursor: default; }
+.opt-btn.correct { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+.opt-btn.wrong   { background: var(--red-bg);   border-color: var(--red);   color: var(--red); }
+
+/* action row */
+.action-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; }
+.hint-btn {
+  padding: 9px 16px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text3);
+  font-family: 'DM Sans', sans-serif; font-size: 12px;
+  cursor: pointer; white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.hint-btn:hover:not(:disabled) { border-color: var(--amber); color: var(--amber); }
+.hint-btn:disabled { opacity: 0.35; cursor: default; }
+.hint-box {
+  flex: 1; display: none;
+  background: var(--amber-bg);
+  border: 1px solid #4a3000;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 12.5px; color: var(--amber);
+  line-height: 1.55;
+}
+
+/* feedback */
+.feedback {
+  display: none;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-top: 10px;
+  font-size: 13px; line-height: 1.6;
+}
+.feedback.correct { background: var(--green-bg); border: 1px solid #1a5230; color: #86efac; }
+.feedback.wrong   { background: var(--red-bg);   border: 1px solid #4a1515; color: #fca5a5; }
+.fb-pts {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 16px; font-weight: 500;
+  display: block; margin-bottom: 6px;
+}
+.pts-up   { color: var(--green); }
+.pts-down { color: var(--red); }
+
+/* next btn */
+.next-btn {
+  display: none; width: 100%;
+  margin-top: 12px; padding: 12px;
+  background: var(--accent2); color: #fff;
+  border: none; border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: background 0.15s;
+}
+.next-btn:hover { background: var(--accent); }
+
+/* ── SUMMARY ── */
+.summary {
+  display: none;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 48px 32px 40px;
+  text-align: center;
+}
+.sum-trophy { font-size: 48px; margin-bottom: 16px; }
+.sum-title { font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; }
+.sum-score {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 64px; font-weight: 500;
+  color: var(--accent); line-height: 1;
+  margin-bottom: 6px;
+}
+.sum-level { font-size: 14px; color: var(--purple); margin-bottom: 32px; }
+.sum-stats {
+  display: flex; justify-content: center; gap: 40px;
+  margin-bottom: 32px; flex-wrap: wrap;
+}
+.ss { text-align: center; }
+.ss-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 28px; font-weight: 500;
+  color: var(--text); display: block; line-height: 1;
+}
+.ss-lbl {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text3);
+  margin-top: 5px;
+}
+.sum-badges { margin-bottom: 28px; }
+.sum-badges-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 10px;
+}
+.restart-btn {
+  padding: 12px 40px;
+  background: var(--accent2); color: #fff;
+  border: none; border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: background 0.15s;
+  margin-right: 10px;
+}
+.restart-btn:hover { background: var(--accent); }
+.export-btn {
+  padding: 12px 24px;
+  background: var(--bg3); color: var(--text2);
+  border: 1px solid var(--border2); border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; cursor: pointer;
+  transition: all 0.15s;
+}
+.export-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* SVG shared styles */
+.w  { stroke: #4a5280; stroke-width: 2; fill: none; }
+.wf { stroke: #f87171; stroke-width: 2; fill: none; stroke-dasharray: 6 3; }
+.comp { stroke: #9095b8; stroke-width: 1.5; fill: #1e2030; }
+.compf { stroke: #f87171; stroke-width: 1.5; fill: #200f0f; }
+.lbl  { font-size: 11px; fill: #9095b8; font-family: 'DM Sans', sans-serif; }
+.lblf { font-size: 11px; fill: #f87171; font-family: 'DM Sans', sans-serif; }
+.lblg { font-size: 11px; fill: #4ade80; font-family: 'DM Sans', sans-serif; }
+.nd   { fill: #9095b8; }
+.ndf  { fill: #f87171; }
+.volt { font-size: 10px; fill: #fbbf24; font-family: 'DM Sans', sans-serif; font-style: italic; }
+
+@media(max-width:600px){
+  .options-grid { grid-template-columns: 1fr; }
+  .score-bar { grid-template-columns: repeat(2,1fr); }
+  .level-box { grid-column: span 2; }
+  .form-row { grid-template-columns: 1fr; }
+  .login-card { padding: 28px 20px; }
+}
+/* ── LOGIN SCREEN ── */
+.login-screen {
+  min-height: 70vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 0;
+}
+.login-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px 44px;
+  width: 100%; max-width: 480px;
+}
+.login-logo { text-align: center; margin-bottom: 28px; }
+.login-logo-icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: var(--accent2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; margin: 0 auto 12px;
+}
+.login-title {
+  font-size: 20px; font-weight: 600; color: var(--text);
+  margin-bottom: 4px;
+}
+.login-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 0.08em;
+  color: var(--text3); text-transform: uppercase;
+}
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9.5px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text3);
+  margin-bottom: 7px;
+}
+.form-input {
+  width: 100%; padding: 11px 14px;
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  outline: none; transition: border-color 0.15s;
+}
+.form-input:focus { border-color: var(--accent); }
+.form-input::placeholder { color: var(--text3); }
+.form-select {
+  width: 100%; padding: 11px 14px;
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  outline: none; cursor: pointer;
+  transition: border-color 0.15s;
+  appearance: none;
+}
+.form-select:focus { border-color: var(--accent); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-err {
+  font-size: 12px; color: var(--red);
+  margin-top: 8px; display: none;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.login-btn {
+  width: 100%; margin-top: 8px;
+  padding: 13px;
+  background: var(--accent2); color: #fff;
+  border: none; border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: background 0.15s;
+}
+.login-btn:hover { background: var(--accent); }
+.login-note {
+  text-align: center; margin-top: 16px;
+  font-size: 11.5px; color: var(--text3);
+  line-height: 1.6;
+}
+/* student tag in header */
+.student-tag {
+  display: none;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; color: var(--text3);
+  text-align: right; line-height: 1.7;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="app-header">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div class="logo-text">GFIS</div>
+        <div class="logo-sub">Gamified Fault Injection Simulator</div>
+      </div>
+    </div>
+    <div class="header-right">
+      UTP Malaysia · E&amp;E Education
+    </div>
+    <div class="student-tag" id="student-tag"></div>
+  </div>
+
+  <!-- ═══════════════════════════════
+       LOGIN SCREEN
+  ═══════════════════════════════ -->
+  <div class="login-screen" id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="login-logo-icon">⚡</div>
+        <div class="login-title">GFIS Session Login</div>
+        <div class="login-sub">Gamified Fault Injection Simulator</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="inp-name">Full Name</label>
+          <input class="form-input" id="inp-name" type="text" placeholder="e.g. Ahmad Razif" autocomplete="off"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inp-id">Student ID</label>
+          <input class="form-input" id="inp-id" type="text" placeholder="e.g. 20001234" autocomplete="off"/>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="inp-group">Group</label>
+          <select class="form-select" id="inp-group">
+            <option value="">— Select —</option>
+            <option>Group A</option>
+            <option>Group B</option>
+            <option>Group C</option>
+            <option>Group D</option>
+            <option>Group E</option>
+            <option>Expert — TA1 Curriculum</option>
+            <option>Expert — TA2 Pedagogy</option>
+            <option>Expert — TA3 Usability</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inp-run">Run Number</label>
+          <select class="form-select" id="inp-run">
+            <option value="">— Select —</option>
+            <option value="Run 1">Run 1 (Pre-test)</option>
+            <option value="Run 2">Run 2 (Post-test)</option>
+            <option value="Expert Review">Expert Review</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-err" id="form-err">⚠ Please complete all fields before starting.</div>
+      <button class="login-btn" onclick="startSession()">Start Session →</button>
+      <div class="login-note">
+        Your results will be exported as a CSV at the end of the session.<br>
+        All 20 scenarios must be completed before export is available.
+      </div>
+    </div>
+  </div>
+
+  <!-- SCORE BAR -->
+  <div class="score-bar" id="game-ui" style="display:none;">
+    <div class="stat">
+      <span class="stat-val sv-score" id="disp-score">0</span>
+      <span class="stat-lbl">Score</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val sv-timer" id="disp-timer">30</span>
+      <span class="stat-lbl">Seconds</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val sv-streak" id="disp-streak">0</span>
+      <span class="stat-lbl">Streak</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val sv-sc" id="disp-sc">1/20</span>
+      <span class="stat-lbl">Scenario</span>
+    </div>
+    <div class="level-box">
+      <div class="level-badge" id="disp-level">⚡ Level 1</div>
+      <div class="level-name" id="disp-levelname">Apprentice</div>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap" id="progress-wrap" style="display:none;">
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <div class="progress-meta">
+      <span id="prog-left">Scenario 1 of 20</span>
+      <span id="prog-right">0 pts · Next level: 300 pts</span>
+    </div>
+  </div>
+
+  <!-- BADGES -->
+  <div class="badges-row" id="badges-row" style="display:none;">
+    <span class="badge-chip" id="b-first">⚡ First Fix</span>
+    <span class="badge-chip" id="b-speed">🚀 Speed Demon</span>
+    <span class="badge-chip" id="b-streak">🔥 Hot Streak ×3</span>
+    <span class="badge-chip" id="b-nohint">🎯 No Hints</span>
+    <span class="badge-chip" id="b-l3">💀 L3 Conqueror</span>
+    <span class="badge-chip" id="b-flawless">✨ Flawless Run</span>
+    <span class="badge-chip" id="b-master">🏆 Master Engineer</span>
+  </div>
+
+  <!-- SCENARIO CARD -->
+  <div class="scenario-card" id="scenario-card" style="display:none;">
+    <div class="sc-top">
+      <span class="sc-title" id="sc-title">—</span>
+      <div class="sc-meta">
+        <span class="diff-badge" id="sc-diff">L1</span>
+        <span class="mult-tag" id="sc-mult">×1.0</span>
+      </div>
+    </div>
+    <div class="sc-body">
+      <div class="circuit-box" id="circuit-box"></div>
+      <div class="fault-tag" id="fault-tag">Fault class: —</div>
+      <div class="sc-desc" id="sc-desc"></div>
+      <div class="options-grid" id="options-grid"></div>
+      <div class="action-row">
+        <button class="hint-btn" id="hint-btn" onclick="useHint()">💡 Hint (−20 pts)</button>
+        <div class="hint-box" id="hint-box"></div>
+      </div>
+      <div class="feedback" id="feedback"></div>
+      <button class="next-btn" id="next-btn" onclick="nextScenario()">Next Scenario →</button>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary" id="summary">
+    <div class="sum-trophy" id="sum-trophy">🏆</div>
+    <div class="sum-title">Session Complete</div>
+    <div class="sum-score" id="sum-score">0</div>
+    <div class="sum-level" id="sum-level">—</div>
+    <div class="sum-stats">
+      <div class="ss"><span class="ss-val" id="ss-correct">0/12</span><span class="ss-lbl">Correct</span></div>
+      <div class="ss"><span class="ss-val" id="ss-avgtime">—</span><span class="ss-lbl">Avg Time</span></div>
+      <div class="ss"><span class="ss-val" id="ss-streak">0</span><span class="ss-lbl">Best Streak</span></div>
+      <div class="ss"><span class="ss-val" id="ss-hints">0</span><span class="ss-lbl">Hints Used</span></div>
+      <div class="ss"><span class="ss-val" id="ss-accuracy">0%</span><span class="ss-lbl">Accuracy</span></div>
+    </div>
+    <div class="sum-badges">
+      <div class="sum-badges-title">Badges Earned</div>
+      <div class="badges-row" style="justify-content:center" id="sum-badges-row"></div>
+    </div>
+    <button class="restart-btn" onclick="restart()">Try Again</button>
+    <button class="export-btn" onclick="exportResults()">Export Results (CSV)</button>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   12 FAULT SCENARIOS
+   Fault classes: OPEN | SHORT | TOLERANCE | WRONG_COMP
+   Difficulty: L1 (×1) | L2 (×1.5) | L3 (×2)
+═══════════════════════════════════════════ */
+const SCENARIOS = [
+  /* ── L1 SCENARIOS (1–4) ── */
+  {
+    id:1, title:"Series Circuit — Open Fault", diff:"L1", mult:1, time:30,
+    faultClass:"Open Circuit",
+    desc:"A 9V battery powers two series resistors (R1=4.7kΩ, R2=4.7kΩ). Expected voltage across R2 ≈ <strong>4.5V</strong>. Measured: <strong>0V</strong>. Identify the fault.",
+    hint:"An open circuit in a series loop stops all current. No current → no voltage drop across any resistor.",
+    correct:1,
+    options:["Short circuit across R2","Open circuit in R1","Battery dead — 0V output","Incorrect ground connection"],
+    explain:"R1 is open circuit — the series loop is broken. No current flows, so V across R2 = 0V. Replacing R1 restores the circuit.",
+    svg:`<svg width="100%" viewBox="0 0 420 150"><line x1="40" y1="40" x2="110" y2="40" class="w"/>
+    <rect x="110" y="28" width="70" height="24" rx="3" class="compf"/>
+    <text x="145" y="44" text-anchor="middle" class="lblf">R1 OPEN</text>
+    <line x1="180" y1="40" x2="260" y2="40" class="w"/>
+    <rect x="260" y="28" width="70" height="24" rx="3" class="comp"/>
+    <text x="295" y="44" text-anchor="middle" class="lbl">R2 4.7kΩ</text>
+    <line x1="330" y1="40" x2="380" y2="40" class="w"/>
+    <line x1="380" y1="40" x2="380" y2="120" class="w"/>
+    <line x1="40" y1="120" x2="380" y2="120" class="w"/>
+    <rect x="20" y="65" width="20" height="55" rx="3" class="comp"/>
+    <text x="10" y="92" class="lbl">9V</text>
+    <line x1="40" y1="40" x2="40" y2="65" class="w"/>
+    <line x1="40" y1="120" x2="40" y2="120" class="w"/>
+    <circle cx="180" cy="40" r="3" class="ndf"/>
+    <text x="185" y="30" class="volt">0V ←</text>
+    <text x="295" y="72" text-anchor="middle" class="lblg">Expected: 4.5V</text></svg>`
+  },
+  {
+    id:2, title:"LED Driver — Polarity Fault", diff:"L1", mult:1, time:30,
+    faultClass:"Wrong Component (Polarity)",
+    desc:"A 5V LED circuit with a 220Ω current-limiting resistor. Battery confirmed good. LED is <strong>completely dark</strong>. What is the fault?",
+    hint:"LEDs are polarised. They only allow current in one direction — anode (+) to cathode (−).",
+    correct:2,
+    options:["220Ω resistor is too high","Open circuit in wire","LED installed in reverse","Short circuit across LED"],
+    explain:"The LED is reversed — its cathode connects to the positive rail, blocking all current. Reversing it will light the LED immediately.",
+    svg:`<svg width="100%" viewBox="0 0 420 150"><line x1="40" y1="40" x2="100" y2="40" class="w"/>
+    <rect x="100" y="28" width="70" height="24" rx="3" class="comp"/>
+    <text x="135" y="44" text-anchor="middle" class="lbl">220Ω</text>
+    <line x1="170" y1="40" x2="220" y2="40" class="w"/>
+    <polygon points="250,25 250,55 220,40" class="compf"/>
+    <line x1="250" y1="25" x2="250" y2="55" stroke="#f87171" stroke-width="2"/>
+    <text x="235" y="75" text-anchor="middle" class="lblf">REVERSED</text>
+    <line x1="250" y1="40" x2="380" y2="40" class="w"/>
+    <line x1="380" y1="40" x2="380" y2="120" class="w"/>
+    <line x1="40" y1="120" x2="380" y2="120" class="w"/>
+    <rect x="20" y="65" width="20" height="55" rx="3" class="comp"/>
+    <text x="10" y="92" class="lbl">5V</text>
+    <line x1="40" y1="40" x2="40" y2="65" class="w"/>
+    <line x1="40" y1="120" x2="40" y2="120" class="w"/>
+    <text x="300" y="30" class="volt">LED OFF →</text></svg>`
+  },
+  {
+    id:3, title:"Parallel Circuit — Short Fault", diff:"L1", mult:1, time:30,
+    faultClass:"Short Circuit",
+    desc:"Two 10kΩ resistors in parallel across 10V. Expected current ≈ <strong>2mA</strong>. Measured current: <strong>1mA</strong>. One branch is not contributing. Identify the fault.",
+    hint:"In a parallel circuit, if one branch draws no current, it is open — or if total current is exactly halved, one resistor may be open rather than shorted.",
+    correct:0,
+    options:["R2 is open circuit","R1 is short circuit","Battery has dropped to 5V","Ammeter is faulty"],
+    explain:"R2 is open circuit — only R1 conducts. With one 10kΩ resistor across 10V, I = 1mA exactly. Replacing R2 restores the expected 2mA.",
+    svg:`<svg width="100%" viewBox="0 0 420 160"><line x1="40" y1="30" x2="380" y2="30" class="w"/>
+    <line x1="40" y1="130" x2="380" y2="130" class="w"/>
+    <rect x="20" y="55" width="20" height="65" rx="3" class="comp"/>
+    <text x="10" y="87" class="lbl">10V</text>
+    <line x1="40" y1="30" x2="40" y2="55" class="w"/>
+    <line x1="40" y1="120" x2="40" y2="130" class="w"/>
+    <line x1="150" y1="30" x2="150" y2="55" class="w"/>
+    <rect x="125" y="55" width="50" height="24" rx="3" class="comp"/>
+    <text x="150" y="72" text-anchor="middle" class="lbl">R1 10kΩ</text>
+    <line x1="150" y1="79" x2="150" y2="130" class="w"/>
+    <line x1="270" y1="30" x2="270" y2="55" class="w"/>
+    <rect x="245" y="55" width="50" height="24" rx="3" class="compf"/>
+    <text x="270" y="72" text-anchor="middle" class="lblf">R2 OPEN</text>
+    <line x1="270" y1="79" x2="270" y2="130" class="wf"/>
+    <text x="340" y="80" class="volt">I=1mA</text>
+    <text x="340" y="95" class="lblg">Exp: 2mA</text></svg>`
+  },
+  {
+    id:4, title:"Voltage Divider — Wrong Component", diff:"L1", mult:1, time:30,
+    faultClass:"Wrong Component",
+    desc:"Voltage divider: R1=10kΩ, R2=10kΩ, supply=10V. Expected Vout = <strong>5V</strong>. Measured Vout = <strong>9.09V</strong>. Identify the fault.",
+    hint:"Vout = Vin × R2/(R1+R2). If Vout is close to Vin, R1 is much smaller than designed, or R2 is much larger.",
+    correct:3,
+    options:["R2 replaced with 1kΩ","R1 is open circuit","Supply jumped to 18V","Short across R1"],
+    explain:"R1 was substituted with 1kΩ instead of 10kΩ. Vout = 10 × 10k/(1k+10k) = 9.09V. A classic wrong-component fault.",
+    svg:`<svg width="100%" viewBox="0 0 420 170"><line x1="210" y1="15" x2="210" y2="35" class="w"/>
+    <rect x="180" y="35" width="60" height="24" rx="3" class="compf"/>
+    <text x="210" y="51" text-anchor="middle" class="lblf">R1=1kΩ!</text>
+    <line x1="210" y1="59" x2="210" y2="80" class="w"/>
+    <circle cx="210" cy="80" r="4" class="ndf"/>
+    <text x="225" y="84" class="volt">9.09V ← Fault</text>
+    <rect x="180" y="88" width="60" height="24" rx="3" class="comp"/>
+    <text x="210" y="104" text-anchor="middle" class="lbl">R2=10kΩ</text>
+    <line x1="210" y1="112" x2="210" y2="145" class="w"/>
+    <line x1="210" y1="145" x2="80" y2="145" class="w"/>
+    <line x1="80" y1="15" x2="80" y2="145" class="w"/>
+    <line x1="80" y1="15" x2="210" y2="15" class="w"/>
+    <text x="60" y="80" class="lbl" text-anchor="middle">10V</text>
+    <text x="340" y="84" class="lblg" text-anchor="start">Expected: 5V</text></svg>`
+  },
+  /* ── L2 SCENARIOS (5–8) ── */
+  {
+    id:5, title:"RC Timer — Time Constant Fault", diff:"L2", mult:1.5, time:25,
+    faultClass:"Wrong Component",
+    desc:"RC circuit: R=10kΩ, C=100μF. Expected time constant τ = <strong>1 second</strong>. Measured τ = <strong>0.1 seconds</strong> (charges 10× faster). What is the fault?",
+    hint:"τ = R × C. If the circuit charges 10× faster, one component is 10× smaller than specified. Which one?",
+    correct:2,
+    options:["Capacitor is shorted internally","Supply voltage too high at 120V","Resistor is 1kΩ instead of 10kΩ","Capacitor replaced with 10μF"],
+    explain:"R was substituted with 1kΩ. τ = 1kΩ × 100μF = 0.1s instead of 1s. The circuit charges 10× faster — a clear wrong-component fault in R.",
+    svg:`<svg width="100%" viewBox="0 0 420 160"><line x1="40" y1="40" x2="100" y2="40" class="w"/>
+    <rect x="100" y="28" width="70" height="24" rx="3" class="compf"/>
+    <text x="135" y="44" text-anchor="middle" class="lblf">1kΩ ← FAULT</text>
+    <line x1="170" y1="40" x2="240" y2="40" class="w"/>
+    <circle cx="240" cy="40" r="3" class="nd"/>
+    <line x1="220" y1="58" x2="260" y2="58" stroke="#9095b8" stroke-width="2.5"/>
+    <line x1="220" y1="68" x2="260" y2="68" stroke="#9095b8" stroke-width="2.5"/>
+    <text x="270" y="67" class="lbl">100μF</text>
+    <line x1="240" y1="40" x2="240" y2="58" class="w"/>
+    <line x1="240" y1="68" x2="240" y2="130" class="w"/>
+    <line x1="240" y1="130" x2="40" y2="130" class="w"/>
+    <rect x="20" y="60" width="20" height="60" rx="3" class="comp"/>
+    <text x="10" y="90" class="lbl">12V</text>
+    <line x1="40" y1="40" x2="40" y2="60" class="w"/>
+    <line x1="40" y1="120" x2="40" y2="130" class="w"/>
+    <text x="310" y="50" class="volt">τ=0.1s !</text>
+    <text x="310" y="65" class="lblg">Expected: 1s</text></svg>`
+  },
+  {
+    id:6, title:"BJT Switch — Base Resistor Fault", diff:"L2", mult:1.5, time:25,
+    faultClass:"Tolerance Deviation",
+    desc:"A BJT switch (2N2222) with Vcc=5V, Rc=1kΩ, Rb=10kΩ. Expected Vce ≈ <strong>0.2V</strong> (saturated). Measured Vce = <strong>2.5V</strong> (not saturating). What is the fault?",
+    hint:"If the BJT is not saturating, the base current is insufficient. A larger-than-specified Rb limits base current and prevents saturation.",
+    correct:1,
+    options:["Rc is short circuit","Rb is 100kΩ instead of 10kΩ","Vcc dropped to 1V","Collector and emitter are swapped"],
+    explain:"Rb is 100kΩ instead of 10kΩ — base current is 10× lower, insufficient to saturate the BJT. Vce stays high at 2.5V. Replace Rb with correct 10kΩ.",
+    svg:`<svg width="100%" viewBox="0 0 420 180"><line x1="200" y1="15" x2="200" y2="55" class="w"/>
+    <rect x="175" y="55" width="50" height="22" rx="3" class="comp"/>
+    <text x="200" y="70" text-anchor="middle" class="lbl">Rc 1kΩ</text>
+    <line x1="200" y1="77" x2="200" y2="100" class="w"/>
+    <rect x="190" y="100" width="20" height="40" rx="2" class="comp"/>
+    <text x="200" y="125" text-anchor="middle" class="lbl" style="font-size:9px">BJT</text>
+    <line x1="100" y1="120" x2="190" y2="120" class="w"/>
+    <rect x="30" y="108" width="70" height="24" rx="3" class="compf"/>
+    <text x="65" y="124" text-anchor="middle" class="lblf">Rb 100kΩ!</text>
+    <line x1="30" y1="120" x2="15" y2="120" class="w"/>
+    <text x="10" y="124" class="lbl" style="font-size:9px">Vin</text>
+    <line x1="200" y1="140" x2="200" y2="165" class="w"/>
+    <line x1="200" y1="165" x2="380" y2="165" class="w"/>
+    <line x1="380" y1="15" x2="380" y2="165" class="w"/>
+    <line x1="200" y1="15" x2="380" y2="15" class="w"/>
+    <text x="360" y="30" class="lbl" text-anchor="end">5V</text>
+    <text x="310" y="110" class="volt">Vce=2.5V</text>
+    <text x="310" y="125" class="lblg">Exp: 0.2V</text></svg>`
+  },
+  {
+    id:7, title:"Wheatstone Bridge — Unbalanced Fault", diff:"L2", mult:1.5, time:25,
+    faultClass:"Tolerance Deviation",
+    desc:"A balanced Wheatstone bridge (R1=R2=R3=R4=10kΩ, Vin=10V). Expected galvanometer reading: <strong>0V</strong>. Measured: <strong>2.5V</strong>. Which resistor has drifted?",
+    hint:"In a balanced bridge, R1/R2 = R3/R4. A 2.5V imbalance on a 10V supply suggests one arm is significantly off. Check which ratio is broken.",
+    correct:0,
+    options:["R1 drifted to 20kΩ (tolerance fault)","R3 is open circuit","Supply is 5V not 10V","Bridge is correctly balanced"],
+    explain:"R1 drifted to 20kΩ — the bridge becomes unbalanced. Top-left arm ratio changes, producing 2.5V across the galvanometer. A classic tolerance deviation.",
+    svg:`<svg width="100%" viewBox="0 0 420 180"><line x1="210" y1="15" x2="210" y2="40" class="w"/>
+    <circle cx="210" cy="40" r="4" class="nd"/>
+    <line x1="210" y1="40" x2="120" y2="80" class="w"/>
+    <line x1="210" y1="40" x2="300" y2="80" class="w"/>
+    <rect x="80" y="80" width="60" height="22" rx="3" class="compf"/>
+    <text x="110" y="95" text-anchor="middle" class="lblf">R1 20kΩ!</text>
+    <rect x="280" y="80" width="60" height="22" rx="3" class="comp"/>
+    <text x="310" y="95" text-anchor="middle" class="lbl">R2 10kΩ</text>
+    <line x1="110" y1="102" x2="110" y2="140" class="w"/>
+    <line x1="310" y1="102" x2="310" y2="140" class="w"/>
+    <rect x="80" y="140" width="60" height="22" rx="3" class="comp"/>
+    <text x="110" y="155" text-anchor="middle" class="lbl">R3 10kΩ</text>
+    <rect x="280" y="140" width="60" height="22" rx="3" class="comp"/>
+    <text x="310" y="155" text-anchor="middle" class="lbl">R4 10kΩ</text>
+    <line x1="110" y1="162" x2="210" y2="162" class="w"/>
+    <line x1="310" y1="162" x2="210" y2="162" class="w"/>
+    <line x1="210" y1="162" x2="210" y2="175" class="w"/>
+    <line x1="140" y1="110" x2="280" y2="110" class="w" style="stroke-dasharray:4 4"/>
+    <text x="210" y="108" text-anchor="middle" class="volt">2.5V !</text>
+    <text x="10" y="90" class="lbl">10V</text></svg>`
+  },
+  {
+    id:8, title:"Zener Regulator — Breakdown Fault", diff:"L2", mult:1.5, time:25,
+    faultClass:"Wrong Component",
+    desc:"A 5.1V Zener regulator with Rs=470Ω, Vin=12V. Expected Vout = <strong>5.1V</strong>. Measured Vout = <strong>8.2V</strong>. What is the fault?",
+    hint:"The Zener is supposed to clamp voltage. If Vout is higher than the Zener voltage rating, the wrong Zener may have been installed.",
+    correct:3,
+    options:["Rs is open circuit","Zener is short circuit","Vin dropped to 8.2V","8.2V Zener installed instead of 5.1V"],
+    explain:"An 8.2V Zener was installed instead of the 5.1V type. The regulator clamps correctly — but at 8.2V. A wrong-component substitution error.",
+    svg:`<svg width="100%" viewBox="0 0 420 170"><line x1="40" y1="50" x2="100" y2="50" class="w"/>
+    <rect x="100" y="38" width="70" height="24" rx="3" class="comp"/>
+    <text x="135" y="54" text-anchor="middle" class="lbl">Rs 470Ω</text>
+    <line x1="170" y1="50" x2="230" y2="50" class="w"/>
+    <circle cx="230" cy="50" r="4" class="nd"/>
+    <text x="238" y="38" class="volt">8.2V ← Fault</text>
+    <line x1="230" y1="50" x2="230" y2="72" class="w"/>
+    <polygon points="210,72 250,72 230,97" class="compf"/>
+    <line x1="205" y1="97" x2="255" y2="97" stroke="#f87171" stroke-width="2.5"/>
+    <text x="230" y="117" text-anchor="middle" class="lblf">8.2V Zener!</text>
+    <line x1="230" y1="117" x2="230" y2="140" class="w"/>
+    <line x1="40" y1="140" x2="380" y2="140" class="w"/>
+    <line x1="380" y1="50" x2="380" y2="140" class="w"/>
+    <line x1="230" y1="50" x2="380" y2="50" class="w"/>
+    <text x="20" y="94" class="lbl">12V</text>
+    <text x="290" y="62" class="lblg">Expected: 5.1V</text></svg>`
+  },
+  /* ── L3 SCENARIOS (9–12) ── */
+  {
+    id:9, title:"Op-Amp Inverter — Gain Fault", diff:"L3", mult:2, time:20,
+    faultClass:"Wrong Component",
+    desc:"An inverting op-amp with Rf=100kΩ, Rin=10kΩ. Expected gain = <strong>−10</strong>. Measured gain = <strong>−1</strong>. With Vin=1V, Vout should be −10V but is only <strong>−1V</strong>. Identify the fault.",
+    hint:"Gain of inverting amp = −Rf/Rin. If gain is −1, either Rf = Rin, or Rf was replaced with a 10kΩ resistor.",
+    correct:0,
+    options:["Rf replaced with 10kΩ instead of 100kΩ","Rin is open circuit","Op-amp power supply is off","Rin replaced with 100kΩ"],
+    explain:"Rf was substituted with 10kΩ instead of 100kΩ. Gain = −10k/10k = −1. Output is −1V instead of −10V. A wrong-component fault in the feedback path.",
+    svg:`<svg width="100%" viewBox="0 0 420 185"><polygon points="160,50 160,130 240,90" class="comp"/>
+    <line x1="60" y1="75" x2="160" y2="75" class="w"/>
+    <rect x="60" y="63" width="60" height="24" rx="3" class="comp"/>
+    <text x="90" y="79" text-anchor="middle" class="lbl">Rin 10k</text>
+    <line x1="60" y1="75" x2="40" y2="75" class="w"/>
+    <text x="32" y="79" class="lbl" text-anchor="end">Vin</text>
+    <line x1="160" y1="105" x2="130" y2="105" class="w"/>
+    <line x1="130" y1="105" x2="130" y2="155" class="w"/>
+    <text x="130" y="168" text-anchor="middle" class="lbl">GND</text>
+    <line x1="240" y1="90" x2="360" y2="90" class="w"/>
+    <text x="300" y="80" text-anchor="middle" class="volt">Vout = −1V !</text>
+    <line x1="90" y1="63" x2="90" y2="30" class="w"/>
+    <line x1="90" y1="30" x2="320" y2="30" class="w"/>
+    <line x1="320" y1="30" x2="320" y2="90" class="w"/>
+    <rect x="165" y="18" width="80" height="24" rx="3" class="compf"/>
+    <text x="205" y="34" text-anchor="middle" class="lblf">Rf 10kΩ !</text>
+    <text x="210" y="160" text-anchor="middle" class="lblg">Expected: −10V (Rf should be 100kΩ)</text></svg>`
+  },
+  {
+    id:10, title:"555 Timer — Frequency Fault", diff:"L3", mult:2, time:20,
+    faultClass:"Tolerance Deviation",
+    desc:"A 555 astable timer: Ra=10kΩ, Rb=10kΩ, C=10μF. Expected frequency ≈ <strong>4.76 Hz</strong>. Measured: <strong>47.6 Hz</strong>. The output pulses 10× too fast. Identify the fault.",
+    hint:"f = 1.44 / ((Ra + 2Rb) × C). If frequency is 10× higher, the capacitor is 10× smaller than specified.",
+    correct:2,
+    options:["Ra replaced with 100kΩ","Supply voltage doubled to 24V","C replaced with 1μF instead of 10μF","Rb is short circuit"],
+    explain:"C = 1μF was installed instead of 10μF. f = 1.44/((10k+20k)×1μF) = 48Hz. A 10× capacitance error causes a 10× frequency increase.",
+    svg:`<svg width="100%" viewBox="0 0 420 180"><rect x="160" y="50" width="100" height="90" rx="6" class="comp"/>
+    <text x="210" y="100" text-anchor="middle" class="lbl" style="font-size:12px;fill:#9095b8">555</text>
+    <line x1="120" y1="65" x2="160" y2="65" class="w"/>
+    <rect x="60" y="53" width="60" height="24" rx="3" class="comp"/>
+    <text x="90" y="69" text-anchor="middle" class="lbl">Ra 10kΩ</text>
+    <line x1="120" y1="85" x2="160" y2="85" class="w"/>
+    <rect x="60" y="73" width="60" height="24" rx="3" class="comp"/>
+    <text x="90" y="89" text-anchor="middle" class="lbl">Rb 10kΩ</text>
+    <line x1="120" y1="110" x2="160" y2="110" class="w"/>
+    <line x1="120" y1="110" x2="120" y2="140" class="w"/>
+    <line x1="100" y1="140" x2="140" y2="140" class="w" style="stroke-width:2.5"/>
+    <line x1="100" y1="150" x2="140" y2="150" class="w" style="stroke-width:2.5"/>
+    <text x="160" y="155" class="lblf">1μF ← FAULT</text>
+    <text x="160" y="170" class="lbl" style="font-size:9px">(should be 10μF)</text>
+    <line x1="260" y1="90" x2="380" y2="90" class="w"/>
+    <text x="385" y="80" class="volt">47.6Hz!</text>
+    <text x="385" y="95" class="lblg" style="font-size:9px">Exp: 4.76Hz</text></svg>`
+  },
+  {
+    id:11, title:"Full-Wave Rectifier — Diode Fault", diff:"L3", mult:2, time:20,
+    faultClass:"Open Circuit",
+    desc:"A full-wave bridge rectifier (4 diodes, 12Vac input). Expected Vdc ≈ <strong>10.8V</strong>. Measured Vdc = <strong>5.4V</strong> — exactly half. The output also shows rectified half-waves only. Identify the fault.",
+    hint:"If a bridge rectifier outputs half the expected DC voltage and half-wave shape, one pair of diodes is no longer conducting. An open in one diagonal pair produces half-wave rectification.",
+    correct:1,
+    options:["Smoothing capacitor is open","D1 or D3 is open circuit — one diagonal pair failed","Load resistor doubled in value","Transformer output halved"],
+    explain:"D1 (or D3) is open — breaking one diagonal of the bridge. Only the D2/D4 pair conducts, converting full-wave to half-wave rectification. Vdc drops to ~half.",
+    svg:`<svg width="100%" viewBox="0 0 420 180"><circle cx="210" cy="90" r="70" fill="none" stroke="#2e3150" stroke-width="1"/>
+    <polygon points="210,30 230,55 190,55" class="comp"/>
+    <line x1="210" y1="55" x2="210" y2="30" class="w"/>
+    <polygon points="210,150 230,125 190,125" class="comp"/>
+    <line x1="210" y1="125" x2="210" y2="150" class="w"/>
+    <polygon points="150,90 175,70 175,110" class="compf"/>
+    <line x1="150" y1="90" x2="175" y2="90" class="wf"/>
+    <text x="140" y="86" text-anchor="end" class="lblf">D1!</text>
+    <polygon points="270,90 245,70 245,110" class="comp"/>
+    <line x1="270" y1="90" x2="245" y2="90" class="w"/>
+    <line x1="210" y1="30" x2="90" y2="30" class="w"/>
+    <line x1="210" y1="150" x2="90" y2="150" class="w"/>
+    <text x="70" y="92" class="lbl" text-anchor="end">12Vac</text>
+    <line x1="210" y1="30" x2="350" y2="30" class="w"/>
+    <line x1="210" y1="150" x2="350" y2="150" class="w"/>
+    <line x1="350" y1="30" x2="350" y2="150" class="w" style="stroke-dasharray:4 4"/>
+    <text x="370" y="84" class="volt">5.4V!</text>
+    <text x="370" y="99" class="lblg" style="font-size:9px">Exp:10.8V</text></svg>`
+  },
+  {
+    id:12, title:"LC Resonant Circuit — Frequency Shift", diff:"L3", mult:2, time:20,
+    faultClass:"Tolerance Deviation",
+    desc:"An LC resonant circuit: L=10mH, C=100nF. Expected resonant frequency f₀ = <strong>5.03 kHz</strong>. Measured f₀ = <strong>15.9 kHz</strong>. The frequency has tripled. Identify the most likely fault.",
+    hint:"f₀ = 1/(2π√LC). If frequency tripled, the product LC is 9× smaller. If L is unchanged, C must be ~9× smaller — or C has been replaced with a 10nF capacitor.",
+    correct:2,
+    options:["Inductor L doubled to 20mH","Resistive losses in the coil","C replaced with 10nF instead of 100nF","Supply frequency changed to 15.9kHz"],
+    explain:"C = 10nF was installed instead of 100nF. f₀ = 1/(2π√(10mH×10nF)) = 15.9kHz. A 10× reduction in capacitance increases frequency by √10 ≈ 3.16×.",
+    svg:`<svg width="100%" viewBox="0 0 420 160"><line x1="40" y1="40" x2="130" y2="40" class="w"/>
+    <path d="M130,40 Q140,20 150,40 Q160,60 170,40 Q180,20 190,40 Q200,60 210,40" fill="none" stroke="#9095b8" stroke-width="2"/>
+    <text x="170" y="25" text-anchor="middle" class="lbl">L=10mH</text>
+    <line x1="210" y1="40" x2="270" y2="40" class="w"/>
+    <line x1="270" y1="25" x2="270" y2="55" stroke="#9095b8" stroke-width="2.5"/>
+    <line x1="280" y1="25" x2="280" y2="55" stroke="#f87171" stroke-width="2.5"/>
+    <text x="290" y="45" class="lblf">10nF!</text>
+    <text x="290" y="58" class="lbl" style="font-size:9px">(was 100nF)</text>
+    <line x1="280" y1="40" x2="380" y2="40" class="w"/>
+    <line x1="380" y1="40" x2="380" y2="120" class="w"/>
+    <line x1="40" y1="120" x2="380" y2="120" class="w"/>
+    <rect x="20" y="60" width="20" height="60" rx="3" class="comp"/>
+    <text x="10" y="90" class="lbl">Src</text>
+    <line x1="40" y1="40" x2="40" y2="60" class="w"/>
+    <line x1="40" y1="120" x2="40" y2="120" class="w"/>
+    <text x="210" y="105" text-anchor="middle" class="volt">f₀ = 15.9kHz !</text>
+    <text x="210" y="120" text-anchor="middle" class="lblg">Expected: 5.03kHz</text></svg>`
+  },
+  /* ── ADDITIONAL L1 (13–14) ── */
+  {
+    id:13, title:"Ground Fault — Missing Return Path", diff:"L1", mult:1, time:30,
+    faultClass:"Open Circuit",
+    desc:"A simple 6V torch circuit: battery, switch, and bulb in series. Switch is ON but bulb is <strong>completely off</strong>. Battery tested good at 6V. Switch continuity confirmed. What is the fault?",
+    hint:"If the battery and switch are both good, the only remaining path is the return wire. A broken ground wire opens the loop.",
+    correct:2,
+    options:["Bulb filament has short circuit","Switch is stuck open","Ground return wire is broken (open)","Battery polarity is reversed"],
+    explain:"The ground return wire has an open fault — the circuit loop is incomplete. Current cannot flow even though the battery and switch are functional. Reconnecting the ground restores the circuit.",
+    svg:`<svg width="100%" viewBox="0 0 420 150"><line x1="40" y1="40" x2="100" y2="40" class="w"/>
+    <rect x="100" y="28" width="50" height="24" rx="3" class="comp"/>
+    <text x="125" y="44" text-anchor="middle" class="lbl">SW</text>
+    <line x1="150" y1="40" x2="210" y2="40" class="w"/>
+    <circle cx="230" cy="40" r="18" class="comp"/>
+    <text x="230" y="44" text-anchor="middle" class="lbl">Bulb</text>
+    <line x1="248" y1="40" x2="380" y2="40" class="w"/>
+    <line x1="380" y1="40" x2="380" y2="120" class="w"/>
+    <line x1="380" y1="120" x2="200" y2="120" class="wf"/>
+    <line x1="140" y1="120" x2="40" y2="120" class="w"/>
+    <line x1="170" y1="113" x2="170" y2="127" stroke="#f87171" stroke-width="2.5"/>
+    <text x="170" y="142" text-anchor="middle" class="lblf">OPEN</text>
+    <rect x="20" y="58" width="20" height="60" rx="3" class="comp"/>
+    <text x="10" y="90" class="lbl">6V</text>
+    <line x1="40" y1="40" x2="40" y2="58" class="w"/>
+    <line x1="40" y1="118" x2="40" y2="120" class="w"/></svg>`
+  },
+  {
+    id:14, title:"Resistor Colour Code — Wrong Value", diff:"L1", mult:1, time:30,
+    faultClass:"Wrong Component",
+    desc:"A current-limiting circuit expects R=470Ω. The installed resistor measures <strong>4.7kΩ</strong> on the meter. Current is 10× lower than designed. What type of fault is this?",
+    hint:"The resistor colour bands were misread — yellow-violet-brown (470Ω) vs yellow-violet-red (4.7kΩ). One band difference, 10× error.",
+    correct:1,
+    options:["Resistor is burned open","Wrong resistor value installed — misread colour code","Supply voltage dropped by factor of 10","Ammeter is reading in wrong units"],
+    explain:"A 4.7kΩ resistor was installed instead of 470Ω — a colour code misread (brown vs red multiplier band). Current = V/R is 10× lower. Always verify with a multimeter before soldering.",
+    svg:`<svg width="100%" viewBox="0 0 420 140"><line x1="40" y1="70" x2="110" y2="70" class="w"/>
+    <rect x="110" y="54" width="100" height="32" rx="6" class="compf"/>
+    <rect x="118" y="54" width="12" height="32" rx="1" fill="#f59e0b"/>
+    <rect x="133" y="54" width="12" height="32" rx="1" fill="#a855f7"/>
+    <rect x="148" y="54" width="12" height="32" rx="1" fill="#ef4444"/>
+    <rect x="163" y="54" width="12" height="32" rx="1" fill="#fbbf24"/>
+    <text x="160" y="102" text-anchor="middle" class="lblf">4.7kΩ installed!</text>
+    <text x="160" y="116" text-anchor="middle" class="lblg" style="font-size:9px">Should be 470Ω</text>
+    <line x1="210" y1="70" x2="380" y2="70" class="w"/>
+    <line x1="380" y1="70" x2="380" y2="120" class="w"/>
+    <line x1="40" y1="120" x2="380" y2="120" class="w"/>
+    <rect x="20" y="78" width="20" height="42" rx="3" class="comp"/>
+    <text x="10" y="100" class="lbl">V</text>
+    <line x1="40" y1="70" x2="40" y2="78" class="w"/>
+    <line x1="40" y1="120" x2="40" y2="120" class="w"/></svg>`
+  },
+  /* ── ADDITIONAL L2 (15–17) ── */
+  {
+    id:15, title:"Differentiator — Output Amplitude Fault", diff:"L2", mult:1.5, time:25,
+    faultClass:"Wrong Component",
+    desc:"An op-amp differentiator: C=10nF, Rf=100kΩ. Input is a 1kHz square wave. Expected peak output ≈ <strong>6.28V</strong>. Measured peak = <strong>0.628V</strong> — 10× too small. Identify the fault.",
+    hint:"Vout = −Rf × C × dVin/dt. If output is 10× smaller, either Rf is 10× smaller or C is 10× smaller than specified.",
+    correct:0,
+    options:["Rf replaced with 10kΩ instead of 100kΩ","Input frequency too low at 100Hz","C replaced with 100nF","Op-amp supply rail is floating"],
+    explain:"Rf = 10kΩ was installed instead of 100kΩ. Vout = −10k × 10n × dV/dt gives 10× smaller output. A wrong-component substitution in the feedback resistor.",
+    svg:`<svg width="100%" viewBox="0 0 420 165"><polygon points="170,45 170,125 250,85" class="comp"/>
+    <line x1="50" y1="70" x2="105" y2="70" class="w"/>
+    <line x1="105" y1="58" x2="105" y2="82" stroke="#9095b8" stroke-width="2.5"/>
+    <line x1="118" y1="58" x2="118" y2="82" stroke="#9095b8" stroke-width="2.5"/>
+    <text x="95" y="100" text-anchor="middle" class="lbl">C=10nF</text>
+    <line x1="118" y1="70" x2="170" y2="70" class="w"/>
+    <line x1="170" y1="100" x2="140" y2="100" class="w"/>
+    <line x1="140" y1="100" x2="140" y2="148" class="w"/>
+    <text x="140" y="160" text-anchor="middle" class="lbl">GND</text>
+    <line x1="250" y1="85" x2="375" y2="85" class="w"/>
+    <text x="355" y="75" class="volt">0.628V!</text>
+    <text x="355" y="90" class="lblg" style="font-size:9px">Exp: 6.28V</text>
+    <line x1="90" y1="58" x2="90" y2="22" class="w"/>
+    <line x1="90" y1="22" x2="320" y2="22" class="w"/>
+    <line x1="320" y1="22" x2="320" y2="85" class="w"/>
+    <rect x="168" y="10" width="70" height="24" rx="3" class="compf"/>
+    <text x="203" y="26" text-anchor="middle" class="lblf">Rf=10kΩ!</text>
+    <text x="10" y="74" class="lbl">Vin</text></svg>`
+  },
+  {
+    id:16, title:"Power Supply — Excessive Ripple", diff:"L2", mult:1.5, time:25,
+    faultClass:"Wrong Component",
+    desc:"A DC power supply with filter capacitor C=1000μF. Expected ripple ≈ <strong>0.1V</strong>. Measured ripple = <strong>10V</strong> — 100× worse. Output is very noisy. Identify the fault.",
+    hint:"Ripple ∝ 1/C. If ripple is 100× larger, the capacitor is 100× smaller than specified.",
+    correct:3,
+    options:["Rectifier diode is reverse biased","Load resistor is open circuit","Transformer is oversized","Filter capacitor is 10μF instead of 1000μF"],
+    explain:"A 10μF capacitor was installed instead of 1000μF. Ripple ≈ I/(f×C) — with 100× less capacitance, ripple is 100× higher. Always verify capacitor value before installation.",
+    svg:`<svg width="100%" viewBox="0 0 420 150"><rect x="30" y="55" width="60" height="50" rx="4" class="comp"/>
+    <text x="60" y="84" text-anchor="middle" class="lbl" style="font-size:10px">Rectifier</text>
+    <line x1="90" y1="70" x2="150" y2="70" class="w"/>
+    <line x1="150" y1="55" x2="150" y2="95" stroke="#9095b8" stroke-width="2.5"/>
+    <line x1="163" y1="55" x2="163" y2="95" stroke="#f87171" stroke-width="2.5"/>
+    <text x="157" y="115" text-anchor="middle" class="lblf">10μF!</text>
+    <text x="157" y="128" class="lbl" style="font-size:9px">(was 1000μF)</text>
+    <line x1="163" y1="70" x2="260" y2="70" class="w"/>
+    <rect x="260" y="55" width="50" height="50" rx="4" class="comp"/>
+    <text x="285" y="84" text-anchor="middle" class="lbl" style="font-size:10px">Load</text>
+    <line x1="310" y1="70" x2="380" y2="70" class="w"/>
+    <line x1="90" y1="100" x2="380" y2="100" class="w"/>
+    <line x1="380" y1="70" x2="380" y2="100" class="w"/>
+    <text x="350" y="50" class="volt">~10V ripple!</text>
+    <text x="350" y="40" class="lblg" style="font-size:9px">Exp: 0.1V</text></svg>`
+  },
+  {
+    id:17, title:"Common-Emitter Amplifier — Transistor Cut-Off", diff:"L2", mult:1.5, time:25,
+    faultClass:"Open Circuit",
+    desc:"A common-emitter NPN amplifier, Vcc=12V, R1=100kΩ, R2=10kΩ. Expected Vce ≈ <strong>6V</strong> (mid-rail bias). Measured Vce = <strong>12V</strong> — transistor is cut off. Identify the fault.",
+    hint:"If Vce = Vcc, the transistor is fully OFF. No base current means no collector current. The bias network may be broken.",
+    correct:2,
+    options:["Rc is short circuit to ground","Emitter resistor Re is open","R2 bias resistor is open circuit","Vcc has risen to 24V"],
+    explain:"R2 is open — the base voltage divider is broken. Without R2, the transistor receives no base current and cuts off. Vce = Vcc = 12V. Replacing R2 restores mid-rail bias.",
+    svg:`<svg width="100%" viewBox="0 0 420 185"><line x1="200" y1="10" x2="200" y2="38" class="w"/>
+    <rect x="175" y="38" width="50" height="22" rx="3" class="comp"/>
+    <text x="200" y="53" text-anchor="middle" class="lbl">Rc 5kΩ</text>
+    <line x1="200" y1="60" x2="200" y2="88" class="w"/>
+    <rect x="190" y="88" width="20" height="45" rx="2" class="comp"/>
+    <text x="200" y="115" text-anchor="middle" class="lbl" style="font-size:9px">NPN</text>
+    <line x1="200" y1="133" x2="200" y2="155" class="w"/>
+    <rect x="175" y="155" width="50" height="20" rx="3" class="comp"/>
+    <text x="200" y="169" text-anchor="middle" class="lbl">Re</text>
+    <line x1="200" y1="175" x2="200" y2="185" class="w"/>
+    <line x1="80" y1="50" x2="190" y2="110" class="w"/>
+    <rect x="30" y="38" width="50" height="22" rx="3" class="comp"/>
+    <text x="55" y="53" text-anchor="middle" class="lbl">R1 100k</text>
+    <line x1="30" y1="49" x2="10" y2="49" class="w"/>
+    <line x1="10" y1="10" x2="10" y2="49" class="w"/>
+    <line x1="10" y1="10" x2="200" y2="10" class="w"/>
+    <rect x="30" y="72" width="50" height="22" rx="3" class="compf"/>
+    <text x="55" y="87" text-anchor="middle" class="lblf">R2 OPEN!</text>
+    <text x="310" y="110" class="volt">Vce=12V!</text>
+    <text x="310" y="125" class="lblg" style="font-size:9px">Exp: 6V</text></svg>`
+  },
+  /* ── ADDITIONAL L3 (18–20) ── */
+  {
+    id:18, title:"Schmitt Trigger — Hysteresis Too Wide", diff:"L3", mult:2, time:20,
+    faultClass:"Wrong Component",
+    desc:"An inverting Schmitt trigger: R1=10kΩ, R2=100kΩ. Expected hysteresis window = <strong>±0.45V</strong>. Measured = <strong>±4.5V</strong> — 10× too wide, causing slow switching. Identify the fault.",
+    hint:"Hysteresis ∝ R1/R2. If the window is 10× wider, R1 is 10× larger than designed.",
+    correct:1,
+    options:["Op-amp supply is ±15V instead of ±5V","R1 is 100kΩ instead of 10kΩ","R2 is open circuit","Input signal amplitude is too high"],
+    explain:"R1 was substituted with 100kΩ instead of 10kΩ. Hysteresis = ±Vsat × R1/R2 — with 10× larger R1, the window becomes 10× wider. Switching is sluggish and misses fast signal transitions.",
+    svg:`<svg width="100%" viewBox="0 0 420 165"><polygon points="160,45 160,125 245,85" class="comp"/>
+    <line x1="40" y1="70" x2="160" y2="70" class="w"/>
+    <line x1="160" y1="100" x2="130" y2="100" class="w"/>
+    <line x1="130" y1="100" x2="130" y2="148" class="w"/>
+    <line x1="85" y1="60" x2="85" y2="22" class="w"/>
+    <line x1="85" y1="22" x2="315" y2="22" class="w"/>
+    <line x1="315" y1="22" x2="315" y2="85" class="w"/>
+    <rect x="155" y="10" width="80" height="24" rx="3" class="compf"/>
+    <text x="195" y="26" text-anchor="middle" class="lblf">R1=100kΩ!</text>
+    <line x1="245" y1="85" x2="380" y2="85" class="w"/>
+    <text x="348" y="74" class="volt">±4.5V!</text>
+    <text x="348" y="88" class="lblg" style="font-size:9px">Exp: ±0.45V</text>
+    <rect x="30" y="128" width="80" height="22" rx="3" class="comp"/>
+    <text x="70" y="143" text-anchor="middle" class="lbl">R2=100kΩ</text>
+    <line x1="70" y1="128" x2="70" y2="70" class="w"/>
+    <line x1="70" y1="150" x2="130" y2="150" class="w"/>
+    <text x="10" y="74" class="lbl">Vin</text></svg>`
+  },
+  {
+    id:19, title:"Three-Phase Rectifier — Phase Loss", diff:"L3", mult:2, time:20,
+    faultClass:"Open Circuit",
+    desc:"A three-phase full-wave rectifier (6 diodes). Normal Vdc ≈ <strong>162V</strong> from 120Vac 3-phase input. Measured Vdc = <strong>108V</strong> with increased ripple. One phase is missing. Identify the fault.",
+    hint:"Loss of one phase in a 3-phase bridge drops Vdc by ~33% and changes output from 6-pulse to 4-pulse pattern.",
+    correct:2,
+    options:["Two diodes have short circuit","Load resistance increased 3×","One supply phase line is open circuit","Neutral wire is disconnected"],
+    explain:"One phase supply line is open — only two phases feed the bridge. Vdc drops from 162V to ~108V and ripple increases significantly. This is a common industrial fault requiring phase-loss protection.",
+    svg:`<svg width="100%" viewBox="0 0 420 170"><text x="25" y="48" class="lbl">Ph A</text>
+    <line x1="62" y1="45" x2="118" y2="45" class="w"/>
+    <text x="25" y="90" class="lbl">Ph B</text>
+    <line x1="62" y1="87" x2="118" y2="87" class="w"/>
+    <text x="25" y="132" class="lblf">Ph C!</text>
+    <line x1="62" y1="129" x2="92" y2="129" class="wf"/>
+    <line x1="86" y1="122" x2="100" y2="136" stroke="#f87171" stroke-width="2.5"/>
+    <line x1="100" y1="122" x2="86" y2="136" stroke="#f87171" stroke-width="2.5"/>
+    <text x="108" y="148" class="lblf">OPEN</text>
+    <rect x="118" y="22" width="120" height="128" rx="6" fill="none" stroke="#3d4170" stroke-width="1" stroke-dasharray="4 4"/>
+    <text x="178" y="88" text-anchor="middle" class="lbl" style="font-size:11px">6-Diode Bridge</text>
+    <text x="178" y="103" text-anchor="middle" class="lbl" style="font-size:9px">(2 phases active)</text>
+    <line x1="238" y1="85" x2="338" y2="85" class="w"/>
+    <rect x="338" y="65" width="55" height="45" rx="4" class="comp"/>
+    <text x="365" y="91" text-anchor="middle" class="lbl" style="font-size:9px">Load</text>
+    <text x="178" y="165" text-anchor="middle" class="volt">Vdc=108V (Exp: 162V)</text></svg>`
+  },
+  {
+    id:20, title:"Buck Converter — Duty Cycle Fault", diff:"L3", mult:2, time:20,
+    faultClass:"Tolerance Deviation",
+    desc:"A buck converter: Vin=24V, target duty cycle D=0.5, expected Vout = <strong>12V</strong>. Measured Vout = <strong>8V</strong>. PWM controller shows D ≈ <strong>0.33</strong>. Output is too low. Identify the fault.",
+    hint:"Vout = Vin × D. If Vout=8V from 24V, actual D = 8/24 = 0.33. The feedback resistor network sets the duty cycle — a wrong resistor shifts the regulation point.",
+    correct:3,
+    options:["Inductor value is too large","Output capacitor is shorted","Switching frequency is too high","Feedback resistor network has wrong value — D is 0.33 not 0.5"],
+    explain:"The feedback voltage divider has a wrong resistor — the PWM controller regulates to the wrong setpoint, producing D=0.33 instead of 0.5. Vout = 24 × 0.33 = 8V. Correcting the feedback resistor restores Vout=12V.",
+    svg:`<svg width="100%" viewBox="0 0 420 155"><rect x="18" y="58" width="60" height="48" rx="4" class="comp"/>
+    <text x="48" y="84" text-anchor="middle" class="lbl" style="font-size:10px">PWM</text>
+    <text x="48" y="98" text-anchor="middle" class="lblf" style="font-size:9px">D=0.33!</text>
+    <line x1="78" y1="72" x2="128" y2="72" class="w"/>
+    <rect x="128" y="60" width="22" height="24" rx="3" class="comp"/>
+    <text x="139" y="57" text-anchor="middle" class="lbl" style="font-size:9px">SW</text>
+    <line x1="150" y1="72" x2="185" y2="72" class="w"/>
+    <path d="M185,52 Q195,32 205,52 Q215,72 225,52 Q235,32 245,52" fill="none" stroke="#9095b8" stroke-width="2"/>
+    <text x="215" y="46" text-anchor="middle" class="lbl" style="font-size:9px">L</text>
+    <line x1="245" y1="52" x2="305" y2="52" class="w"/>
+    <circle cx="305" cy="52" r="3" class="nd"/>
+    <line x1="305" y1="52" x2="305" y2="70" class="w"/>
+    <line x1="290" y1="70" x2="320" y2="70" stroke="#9095b8" stroke-width="2.5"/>
+    <line x1="290" y1="80" x2="320" y2="80" stroke="#9095b8" stroke-width="2.5"/>
+    <line x1="305" y1="80" x2="305" y2="120" class="w"/>
+    <line x1="305" y1="120" x2="18" y2="120" class="w"/>
+    <line x1="18" y1="106" x2="18" y2="120" class="w"/>
+    <line x1="305" y1="52" x2="378" y2="52" class="w"/>
+    <line x1="378" y1="52" x2="378" y2="120" class="w"/>
+    <line x1="348" y1="120" x2="378" y2="120" class="w"/>
+    <rect x="228" y="100" width="68" height="22" rx="3" class="compf"/>
+    <text x="262" y="115" text-anchor="middle" class="lblf">R-FB wrong!</text>
+    <line x1="262" y1="100" x2="262" y2="52" class="w" style="stroke-dasharray:3 3"/>
+    <text x="348" y="42" class="volt">8V out!</text>
+    <text x="348" y="55" class="lblg" style="font-size:9px">Exp: 12V</text></svg>`
+  }
+];
+
+/* ════════════════════════════════════
+   STUDENT SESSION DATA
+════════════════════════════════════ */
+let studentName='', studentID='', studentGroup='', studentRun='', sessionStart='';
+
+function startSession(){
+  const name  = document.getElementById('inp-name').value.trim();
+  const id    = document.getElementById('inp-id').value.trim();
+  const group = document.getElementById('inp-group').value;
+  const run   = document.getElementById('inp-run').value;
+  const err   = document.getElementById('form-err');
+
+  if(!name || !id || !group || !run){
+    err.style.display='block'; return;
+  }
+  err.style.display='none';
+
+  studentName  = name;
+  studentID    = id;
+  studentGroup = group;
+  studentRun   = run;
+  sessionStart = new Date().toISOString();
+
+  // Update header tag
+  const tag = document.getElementById('student-tag');
+  tag.innerHTML = `${name}<br>${id} · ${group} · ${run}`;
+  tag.style.display='block';
+  document.querySelector('.header-right').style.display='none';
+
+  // Hide login, show game UI
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('game-ui').style.display='grid';
+  document.getElementById('progress-wrap').style.display='block';
+  document.getElementById('badges-row').style.display='flex';
+  document.getElementById('scenario-card').style.display='block';
+
+  updateHUD();
+  load(0);
+}
+
+
+const LEVELS = [
+  { min:0,    label:"⚡ Level 1", name:"Apprentice" },
+  { min:200,  label:"🔧 Level 2", name:"Circuit Trainee" },
+  { min:500,  label:"🔍 Level 3", name:"Fault Detective" },
+  { min:900,  label:"🛠 Level 4",  name:"Senior Technician" },
+  { min:1400, label:"🏆 Level 5", name:"Master Engineer" },
+];
+
+/* ════════════════════════════════════
+   STATE
+════════════════════════════════════ */
+let idx=0, score=0, streak=0, bestStreak=0;
+let hintUsed=false, answered=false;
+let timerID=null, timeLeft=30;
+let totalTimeTaken=0, correctCount=0, totalHints=0;
+let badHint=false;
+const log = []; // per-scenario result log for CSV export
+
+const badges = {
+  first:   { id:'b-first',    earned:false },
+  speed:   { id:'b-speed',    earned:false },
+  streak:  { id:'b-streak',   earned:false },
+  nohint:  { id:'b-nohint',   earned:true  }, // starts true, revoked on hint
+  l3:      { id:'b-l3',       earned:false },
+  flawless:{ id:'b-flawless', earned:true  }, // starts true, revoked on wrong
+  master:  { id:'b-master',   earned:false },
+};
+
+/* ════════════════════════════════════
+   HELPERS
+════════════════════════════════════ */
+function getLevel(s){ let l=LEVELS[0]; for(const x of LEVELS){ if(s>=x.min) l=x; } return l; }
+
+function updateHUD(){
+  document.getElementById('disp-score').textContent  = score;
+  document.getElementById('disp-streak').textContent = streak;
+  document.getElementById('disp-sc').textContent     = `${Math.min(idx+1,20)}/20`;
+  const lv = getLevel(score);
+  document.getElementById('disp-level').textContent     = lv.label;
+  document.getElementById('disp-levelname').textContent = lv.name;
+  const next = LEVELS.find(l=>l.min>score);
+  document.getElementById('prog-left').textContent  = `Scenario ${Math.min(idx+1,20)} of 20`;
+  document.getElementById('prog-right').textContent = `${score} pts · ${next?'Next level: '+next.min+' pts':'Max level!'}`;
+  const pct = Math.min(100,(score/1800)*100);
+  document.getElementById('progress-fill').style.width = pct+'%';
+}
+
+function setBadge(key, state){
+  if(state === badges[key].earned) return;
+  badges[key].earned = state;
+  const el = document.getElementById(badges[key].id);
+  el.classList.toggle('earned', state);
+}
+
+function startTimer(limit){
+  timeLeft = limit;
+  clearInterval(timerID);
+  const el = document.getElementById('disp-timer');
+  el.textContent = timeLeft;
+  el.className = 'stat-val sv-timer';
+  timerID = setInterval(()=>{
+    timeLeft--;
+    el.textContent = timeLeft;
+    el.className = 'stat-val sv-timer' + (timeLeft<=10 ? (timeLeft<=5?' danger':' warn') : '');
+    if(timeLeft<=0){ clearInterval(timerID); if(!answered) timeExpired(); }
+  },1000);
+}
+
+/* ════════════════════════════════════
+   LOAD SCENARIO
+════════════════════════════════════ */
+function load(i){
+  const s = SCENARIOS[i];
+  answered = false; hintUsed = false;
+  const scStart = Date.now();
+  window._scStart = scStart;
+
+  document.getElementById('sc-title').textContent = s.title;
+  const db = document.getElementById('sc-diff');
+  db.textContent = s.diff;
+  db.className = 'diff-badge d'+s.diff;
+  document.getElementById('sc-mult').textContent = '×'+s.mult;
+  document.getElementById('fault-tag').textContent = 'Fault class: '+s.faultClass;
+  document.getElementById('sc-desc').innerHTML  = s.desc;
+  document.getElementById('circuit-box').innerHTML = s.svg;
+  document.getElementById('hint-box').style.display = 'none';
+  document.getElementById('hint-btn').disabled = false;
+  document.getElementById('hint-btn').textContent = '💡 Hint (−20 pts)';
+  document.getElementById('feedback').style.display = 'none';
+  document.getElementById('next-btn').style.display = 'none';
+
+  // Shuffle answer options each load for research validity
+  const correctText = s.options[s.correct];
+  const shuffled = [...s.options].sort(()=>Math.random()-0.5);
+  window._shuffledCorrectIdx = shuffled.indexOf(correctText);
+  window._shuffledOptions = shuffled;
+
+  const grid = document.getElementById('options-grid');
+  grid.innerHTML='';
+  shuffled.forEach((opt,i)=>{
+    const b = document.createElement('button');
+    b.className='opt-btn'; b.textContent=opt;
+    b.onclick=()=>selectAnswer(i);
+    grid.appendChild(b);
+  });
+
+  updateHUD();
+  startTimer(s.time);
+}
+
+/* ════════════════════════════════════
+   ANSWER
+════════════════════════════════════ */
+function selectAnswer(chosen){
+  if(answered) return;
+  answered=true; clearInterval(timerID);
+  const s = SCENARIOS[idx];
+  const correctIdx = window._shuffledCorrectIdx;
+  const elapsed = Math.round((Date.now()-window._scStart)/1000);
+  totalTimeTaken += elapsed;
+
+  const btns = document.querySelectorAll('.opt-btn');
+  btns.forEach(b=>b.disabled=true);
+  btns[correctIdx].classList.add('correct');
+
+  const fb = document.getElementById('feedback');
+  fb.style.display='block';
+
+  let pts=0, baseP=0, timeBonus=0, streakBonus=0, hintPenalty=0;
+
+  if(chosen===correctIdx){
+    correctCount++;
+    streak++; if(streak>bestStreak) bestStreak=streak;
+    baseP       = Math.round(100*s.mult);
+    timeBonus   = Math.round(Math.max(0,(timeLeft/s.time)*50*s.mult));
+    streakBonus = streak>=3?25:0;
+    hintPenalty = hintUsed?20:0;
+    pts = Math.max(0, baseP+timeBonus+streakBonus-hintPenalty);
+    score += pts;
+
+    // badges
+    setBadge('first', true);
+    if(timeBonus >= Math.round(40*s.mult)) setBadge('speed', true);
+    if(streak>=3) setBadge('streak', true);
+    if(s.diff==='L3') setBadge('l3', true);
+
+    btns[chosen].classList.add('correct');
+    fb.className='feedback correct';
+    fb.innerHTML=`<span class="fb-pts"><span class="pts-up">+${pts} pts</span></span>
+      Base ${baseP} + Time +${timeBonus}${streakBonus?` + Streak +${streakBonus}`:''}${hintPenalty?` − Hint ${hintPenalty}`:''}<br><br>${s.explain}`;
+  } else {
+    streak=0; badges.flawless.earned=false;
+    document.getElementById(badges.flawless.id).classList.remove('earned');
+    btns[chosen].classList.add('wrong');
+    fb.className='feedback wrong';
+    fb.innerHTML=`<span class="fb-pts"><span class="pts-down">+0 pts — Incorrect</span></span><br><br>${s.explain}`;
+  }
+
+  // log result
+  log.push({
+    studentName, studentID, studentGroup, studentRun,
+    sessionStart,
+    completedAt: new Date().toISOString(),
+    scenario: s.id,
+    title: s.title,
+    difficulty: s.diff,
+    faultClass: s.faultClass,
+    correct: chosen===correctIdx?'Yes':'No',
+    timeTaken: elapsed,
+    timeLimit: s.time,
+    ptsEarned: pts,
+    hintUsed: hintUsed?'Yes':'No',
+    streak: streak
+  });
+
+  updateHUD();
+  document.getElementById('next-btn').style.display='block';
+}
+
+function timeExpired(){
+  if(answered) return;
+  answered=true; streak=0;
+  badges.flawless.earned=false;
+  document.getElementById(badges.flawless.id).classList.remove('earned');
+  const s=SCENARIOS[idx];
+  const correctIdx=window._shuffledCorrectIdx;
+  const btns=document.querySelectorAll('.opt-btn');
+  btns.forEach(b=>b.disabled=true);
+  btns[correctIdx].classList.add('correct');
+  const fb=document.getElementById('feedback');
+  fb.className='feedback wrong'; fb.style.display='block';
+  fb.innerHTML=`<span class="fb-pts"><span class="pts-down">Time expired — +0 pts</span></span><br><br>${s.explain}`;
+  log.push({
+    studentName, studentID, studentGroup, studentRun,
+    sessionStart,
+    completedAt: new Date().toISOString(),
+    scenario:s.id, title:s.title, difficulty:s.diff,
+    faultClass:s.faultClass, correct:'No (Time)',
+    timeTaken:s.time, timeLimit:s.time, ptsEarned:0,
+    hintUsed:hintUsed?'Yes':'No', streak:0
+  });
+  updateHUD();
+  document.getElementById('next-btn').style.display='block';
+}
+
+function useHint(){
+  if(hintUsed||answered) return;
+  hintUsed=true; totalHints++;
+  setBadge('nohint',false);
+  const hb=document.getElementById('hint-box');
+  hb.textContent=SCENARIOS[idx].hint;
+  hb.style.display='block';
+  const hBtn=document.getElementById('hint-btn');
+  hBtn.disabled=true; hBtn.textContent='Hint used';
+}
+
+function nextScenario(){
+  idx++;
+  if(idx>=SCENARIOS.length){ showSummary(); return; }
+  load(idx);
+}
+
+/* ════════════════════════════════════
+   SUMMARY
+════════════════════════════════════ */
+function showSummary(){
+  clearInterval(timerID);
+  // final badges
+  if(badges.nohint.earned)   setBadge('nohint',true);
+  if(badges.flawless.earned) setBadge('flawless',true);
+  if(score>=1400)            setBadge('master',true);
+
+  document.getElementById('scenario-card').style.display='none';
+  const sum=document.getElementById('summary');
+  sum.style.display='block';
+
+  const acc=Math.round((correctCount/20)*100);
+  const avgT=Math.round(totalTimeTaken/20);
+  const lv=getLevel(score);
+
+  document.getElementById('sum-score').textContent=score;
+  document.getElementById('sum-level').textContent=lv.label+' — '+lv.name;
+  document.getElementById('ss-correct').textContent=`${correctCount}/20`;
+  document.getElementById('ss-avgtime').textContent=`${avgT}s`;
+  document.getElementById('ss-streak').textContent=bestStreak;
+  document.getElementById('ss-hints').textContent=totalHints;
+  document.getElementById('ss-accuracy').textContent=`${acc}%`;
+
+  // trophy
+  const trophies=['😓','😐','🙂','👍','🎯','🏆'];
+  const ti=Math.min(5,Math.floor((acc/100)*5.99));
+  document.getElementById('sum-trophy').textContent=trophies[ti];
+
+  // earned badges in summary
+  const row=document.getElementById('sum-badges-row');
+  row.innerHTML='';
+  Object.values(badges).forEach(b=>{
+    if(b.earned){
+      const el=document.getElementById(b.id);
+      const chip=document.createElement('span');
+      chip.className='badge-chip earned';
+      chip.textContent=el.textContent;
+      row.appendChild(chip);
+    }
+  });
+  if(row.innerHTML==='') row.innerHTML='<span style="font-size:12px;color:var(--text3)">No badges earned — try again!</span>';
+}
+
+/* ════════════════════════════════════
+   EXPORT CSV
+════════════════════════════════════ */
+function exportResults(){
+  const headers = Object.keys(log[0]).join(',');
+  const rows = log.map(r=>Object.values(r).map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv = [headers,...rows].join('\r\n');
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM+csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='GFIS_Session_Results.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+/* ════════════════════════════════════
+   RESTART
+════════════════════════════════════ */
+function restart(){
+  idx=0; score=0; streak=0; bestStreak=0;
+  hintUsed=false; answered=false;
+  totalTimeTaken=0; correctCount=0; totalHints=0;
+  log.length=0;
+  studentName=''; studentID=''; studentGroup=''; studentRun=''; sessionStart='';
+  Object.keys(badges).forEach(k=>{
+    badges[k].earned = (k==='nohint'||k==='flawless');
+    document.getElementById(badges[k].id).classList.toggle('earned', badges[k].earned);
+  });
+  // Reset inputs
+  ['inp-name','inp-id'].forEach(id=>{ document.getElementById(id).value=''; });
+  ['inp-group','inp-run'].forEach(id=>{ document.getElementById(id).value=''; });
+  // Show login, hide game
+  document.getElementById('summary').style.display='none';
+  document.getElementById('scenario-card').style.display='none';
+  document.getElementById('game-ui').style.display='none';
+  document.getElementById('progress-wrap').style.display='none';
+  document.getElementById('badges-row').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.querySelector('.header-right').style.display='block';
+  document.getElementById('student-tag').style.display='none';
+}
+
+/* ── INIT — show login only ── */
+updateHUD();
+</script>
+</body>
+</html>
